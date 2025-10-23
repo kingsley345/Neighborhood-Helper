@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neighborhood Helper</title>
+  <style>
+    :root{--accent:#2b6cb0;--muted:#6b7280;--bg:#f3f4f6}
+    *{box-sizing:border-box}
+    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111}
+    .site-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.04)}
+    .brand{font-weight:700;color:var(--accent)}
+    .main-nav a{margin-left:12px;text-decoration:none;color:var(--accent)}
+    .main-nav a.active{font-weight:700}
+    .container{max-width:980px;margin:20px auto;padding:0 16px}
+    .card{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 6px 18px rgba(15,23,42,0.04)}
+    .hero{padding:28px}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    .button{display:inline-block;padding:10px 14px;border-radius:8px;background:var(--accent);color:#fff;text-decoration:none;cursor:pointer}
+    .button.secondary{background:#eef2ff;color:var(--accent)}
+    input,textarea,button,select{font-family:inherit}
+    input,textarea,select{width:100%;padding:10px;border:1px solid #e6e6e6;border-radius:8px;margin-top:8px}
+    button{padding:10px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;margin-top:8px;cursor:pointer}
+    .list > div{padding:8px;border-bottom:1px solid #f1f1f1}
+    .site-footer{text-align:center;color:var(--muted);padding:18px 0}
+    .small{font-size:0.85em;color:var(--muted)}
+    .message{border:1px solid #e6e6e6;padding:6px 10px;border-radius:6px;margin-bottom:6px}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">Neighborhood Helper</div>
+    <nav class="main-nav">
+      <a href="#" class="nav-link active" data-page="home">Home</a>
+      <a href="#" class="nav-link" data-page="helpers">Helpers</a>
+      <a href="#" class="nav-link" data-page="requests">Requests</a>
+      <a href="#" class="nav-link" data-page="profile">Profile</a>
+      <a href="#" class="nav-link" data-page="messages">Messages</a>
+      <a href="#" class="nav-link" data-page="ratings">Ratings</a>
+      <a href="#" class="nav-link" data-page="favorites">Favorites</a>
+      <a href="#" class="nav-link" data-page="dashboard">Dashboard</a>
+      <a href="#" class="nav-link" data-page="about">About</a>
+    </nav>
+  </header>
+
+  <main class="container" id="mainContent"></main>
+
+  <footer class="site-footer">
+    <p>© 2025 Neighborhood Helper</p>
+  </footer>
+
+  <script>
+    const HELPERS_KEY='nh_helpers_v3';
+    const REQUESTS_KEY='nh_requests_v3';
+    const MESSAGES_KEY='nh_messages_v3';
+    const RATINGS_KEY='nh_ratings_v3';
+    const FAVORITES_KEY='nh_favorites_v3';
+
+    (function(){
+      if(!localStorage.getItem(HELPERS_KEY)){
+        const demo=[
+          {id:1,name:'Aino R',skills:['cleaning','ironing'],rate:18,location:'Kokkola',rating:4.9},
+          {id:2,name:'Mika K',skills:['moving','assembly','handyman'],rate:22,location:'Kokkola',rating:4.7},
+          {id:3,name:'Sara L',skills:['babysitting','tutoring'],rate:16,location:'Kokkola',rating:4.8}
+        ];
+        localStorage.setItem(HELPERS_KEY,JSON.stringify(demo));
+      }
+    })();
+
+    function esc(s){if(!s && s!==0) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+    function renderPage(page){
+      const main=document.getElementById('mainContent');
+      const helpers=JSON.parse(localStorage.getItem(HELPERS_KEY)||'[]');
+      const requests=JSON.parse(localStorage.getItem(REQUESTS_KEY)||'[]');
+      const messages=JSON.parse(localStorage.getItem(MESSAGES_KEY)||'[]');
+      const ratings=JSON.parse(localStorage.getItem(RATINGS_KEY)||'[]');
+      const favorites=JSON.parse(localStorage.getItem(FAVORITES_KEY)||'[]');
+
+      // Navigation highlight
+      document.querySelectorAll('.nav-link').forEach(a=>a.classList.remove('active'));
+      const navLink=document.querySelector(`.nav-link[data-page='${page}']`);
+      if(navLink) navLink.classList.add('active');
+
+      if(page==='home'){
+        main.innerHTML=`<section class="hero card">
+          <h1>Welcome to Neighborhood Helper</h1>
+          <p>Connect with helpers, post jobs, send messages, and build your local community.</p>
+          <div class="actions">
+            <button class="button" data-page="helpers">Find a Helper</button>
+            <button class="button secondary" data-page="requests">Post a Request</button>
+          </div>
+        </section>`;
+      }
+      else if(page==='helpers'){
+        main.innerHTML=`<section class="card">
+          <h2>Available Helpers</h2>
+          <input id="searchHelper" placeholder="Search helpers by skill, name or location..." />
+          <select id="sortHelper"><option value="">Sort By</option><option value="rate">Rate</option><option value="rating">Rating</option></select>
+          <div id="helpersList" class="list"></div>
+        </section>`;
+        const list=document.getElementById('helpersList');
+        function renderHelpers(filter='',sort=''){const q=filter.trim().toLowerCase();
+          let filtered=helpers.filter(h=>!q||h.name.toLowerCase().includes(q)||h.skills.join(' ').toLowerCase().includes(q)||(h.location||'').toLowerCase().includes(q));
+          if(sort==='rate') filtered.sort((a,b)=>a.rate-b.rate);
+          if(sort==='rating') filtered.sort((a,b)=>b.rating-a.rating);
+          list.innerHTML=filtered.length===0?'<div>No helpers found.</div>':filtered.map(h=>`<div><strong>${esc(h.name)}</strong> — ${esc(h.skills.join(', '))} (${esc(h.rate)}€/h) <div class="small">Rating: ${h.rating}</div></div>`).join('');
+        }
+        renderHelpers();
+        document.getElementById('searchHelper').addEventListener('input',e=>renderHelpers(e.target.value,document.getElementById('sortHelper').value));
+        document.getElementById('sortHelper').addEventListener('change',e=>renderHelpers(document.getElementById('searchHelper').value,e.target.value));
+      }
+      else if(page==='requests'){
+        main.innerHTML=`<section class="card">
+          <h2>Post a Request</h2>
+          <form id="requestForm">
+            <input id="reqTitle" placeholder="Title" required />
+            <textarea id="reqDesc" rows="3" placeholder="Description" required></textarea>
+            <input id="reqLocation" placeholder="Location" required />
+            <input id="reqBudget" placeholder="Budget (optional)" />
+            <button type="submit">Submit Request</button>
+          </form>
+          <h2>Recent Requests</h2>
+          <div id="requestsList" class="list"></div>
+        </section>`;
+        function renderRequests(){
+          document.getElementById('requestsList').innerHTML=requests.length===0?'<div>No requests yet.</div>':requests.slice().reverse().map(r=>`<div><strong>${esc(r.title)}</strong> — ${esc(r.location)}<div class="small">${r.budget?esc(r.budget)+'€':'No budget'}</div><div>${esc(r.desc)}</div></div>`).join('');
+        }
+        renderRequests();
+        document.getElementById('requestForm').addEventListener('submit',e=>{
+          e.preventDefault();
+          requests.push({id:Date.now(),title:document.getElementById('reqTitle').value,desc:document.getElementById('reqDesc').value,location:document.getElementById('reqLocation').value,budget:document.getElementById('reqBudget').value,created:new Date().toISOString()});
+          localStorage.setItem(REQUESTS_KEY,JSON.stringify(requests));
+          e.target.reset();
+          renderRequests();
+          alert('Request posted (localStorage demo).');
+        });
+      }
+      else if(page==='profile'){
+        main.innerHTML=`<section class="card">
+          <h2>Register / Edit Helper Profile</h2>
+          <form id="helperForm">
+            <input id="helpName" placeholder="Full Name" required />
+            <input id="helpSkills" placeholder="Skills (comma separated)" required />
+            <input id="helpRate" type="number" placeholder="Hourly Rate" required />
+            <button type="submit">Save Profile</button>
+          </form>
+          <h2>My Profile</h2>
+          <div id="myProfile" class="list"></div>
+        </section>`;
+        function renderProfile(){
+          const profile=helpers.map(h=>`<div><strong>${esc(h.name)}</strong> — ${esc(h.skills.join(', '))} (${esc(h.rate)}€/h)</div>`).join('')||'<div>No profiles yet.</div>';
+          document.getElementById('myProfile').innerHTML=profile;
+        }
+        renderProfile();
+        document.getElementById('helperForm').addEventListener('submit',e=>{
+          e.preventDefault();
+          helpers.push({id:Date.now(),name:document.getElementById('helpName').value,skills:document.getElementById('helpSkills').value.split(',').map(s=>s.trim()),rate:Number(document.getElementById('helpRate').value),rating:4.5});
+          localStorage.setItem(HELPERS_KEY,JSON.stringify(helpers));
+          e.target.reset();
+          renderProfile();
+          alert('Helper saved.');
+        });
+      }
+      else if(page==='messages'){
+        main.innerHTML=`<section class="card">
+          <h2>Messages</h2>
+          <textarea id="msgText" placeholder="Type a message"></textarea>
+          <button id="sendMsg">Send Message</button>
+          <div id="messagesList" class="list"></div>
+        </section>`;
+        function renderMessages(){
+          document.getElementById('messagesList').innerHTML=messages.length===0?'<div>No messages.</div>':messages.map(m=>`<div class="message">${esc(m.text)} <div class="small">${m.date}</div></div>`).join('');
+        }
+        renderMessages();
+        document.getElementById('sendMsg').addEventListener('click',()=>{
+          const txt=document.getElementById('msgText').value.trim();
+          if(txt===''){alert('Enter a message');return;}
+          messages.push({text:txt,date:new Date().toLocaleString()});
+          localStorage.setItem(MESSAGES_KEY,JSON.stringify(messages));
+          document.getElementById('msgText').value='';
+          renderMessages();
+        });
+      }
+      else if(page==='ratings'){
+        main.innerHTML=`<section class="card">
+          <h2>Rate Helpers</h2>
+          <select id="rateHelperSelect"><option value="">Select Helper</option>${helpers.map(h=>`<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>
+          <input id="rateValue" type="number" min="1" max="5" placeholder="Rating 1-5" />
+          <button id="submitRating">Submit Rating</button>
+          <h2>Current Ratings</h2>
+          <div id="ratingsList" class="list"></div>
+        </section>`;
+        function renderRatings(){
+          const avg=helpers.map(h=>{const rs=ratings.filter(r=>r.helperId===h.id);return {...h,avg:rs.length?rs.reduce((a,b)=>a+b.value,0)/rs.length:0};});
+          document.getElementById('ratingsList').innerHTML=avg.map(h=>`<div><strong>${esc(h.name)}</strong> — Avg Rating: ${h.avg.toFixed(1)}</div>`).join('');
+        }
+        renderRatings();
+        document.getElementById('submitRating').addEventListener('click',()=>{
+          const hid=Number(document.getElementById('rateHelperSelect').value);
+          const val=Number(document.getElementById('rateValue').value);
+          if(!hid||val<1||val>5){alert('Select helper and rating 1-5');return;}
+          ratings.push({helperId:hid,value:val});
+          localStorage.setItem(RATINGS_KEY,JSON.stringify(ratings));
+          document.getElementById('rateValue').value='';
+          document.getElementById('rateHelperSelect').value='';
+          renderRatings();
+        });
+      }
+      else if(page==='favorites'){
+        main.innerHTML=`<section class="card">
+          <h2>Favorite Helpers</h2>
+          <select id="favHelperSelect"><option value="">Select Helper</option>${helpers.map(h=>`<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>
+          <button id="addFavorite">Add to Favorites</button>
+          <div id="favoritesList" class="list"></div>
+        </section>`;
+        function renderFavorites(){
+          document.getElementById('favoritesList').innerHTML=favorites.length===0?'<div>No favorites yet.</div>':favorites.map(fid=>{const h=helpers.find(h=>h.id===fid);return `<div>${esc(h.name)}</div>`;}).join('');
+        }
+        renderFavorites();
+        document.getElementById('addFavorite').addEventListener('click',()=>{
+          const hid=Number(document.getElementById('favHelperSelect').value);
+          if(!hid){alert('Select a helper');return;}
+          if(!favorites.includes(hid)) favorites.push(hid);
+          localStorage.setItem(FAVORITES_KEY,JSON.stringify(favorites));
+          renderFavorites();
+        });
+      }
+      else if(page==='dashboard'){
+        main.innerHTML=`<section class="card">
+          <h2>Dashboard</h2>
+          <div><strong>Total Helpers:</strong> ${helpers.length}</div>
+          <div><strong>Total Requests:</strong> ${requests.length}</div>
+          <div><strong>Total Messages:</strong> ${messages.length}</div>
+          <div><strong>Favorites:</strong> ${favorites.length}</div>
+        </section>`;
+      }
+      else if(page==='about'){
+        main.innerHTML=`<section class="card">
+          <h2>About Neighborhood Helper</h2>
+          <p>Neighborhood Helper connects neighbors for short, reliable tasks. All data is stored locally in your browser.</p>
+        </section>`;
+      }
+    }
+
+    document.addEventListener('click',e=>{if(e.target.dataset.page){e.preventDefault();renderPage(e.target.dataset.page);}});
+    renderPage('home');
+  </script>
+</body>
+</html>
