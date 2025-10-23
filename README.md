@@ -1,4 +1,4 @@
-# Neighborhood Helper — Local Demo
+# Neighborhood Helper — PROJECT PLAN
 # Neighborhood Helper  
 *Connecting Local Needs and Skills in the Community**  
 _Project by: KINGSLEY OODO — 2025_
